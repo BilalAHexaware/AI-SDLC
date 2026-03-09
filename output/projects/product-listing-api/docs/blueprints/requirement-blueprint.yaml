@@ -1,0 +1,161 @@
+version: "1.0.0"
+
+traceability:
+  baselineId: github-issue-3
+  sourceDocuments:
+    - ref: https://github.com/BilalAHexaware/AI-SDLC/issues/3
+      type: user-story
+      description: Product Listing API user story
+
+service:
+  name: product-listing-service
+  domain: product-catalog
+  category: customer-facing
+  description: RESTful backend service exposing product catalog via public GET endpoint
+  owner: platform-team
+
+requirements:
+
+  - id: REQ-001
+    title: GET /api/v1/products endpoint
+    type: functional
+    description: Public REST endpoint returning JSON product list with data array and meta object
+    userStories:
+      - as: customer
+        iWant: to view a list of available products
+        soThat: I can browse and make informed purchasing decisions
+    apiContracts:
+      - endpoints:
+          - path: /api/v1/products
+            method: GET
+            description: Returns all products wrapped in data/meta envelope
+    acceptanceCriteria:
+      - GET /api/v1/products returns HTTP 200 with Content-Type application/json
+      - Response body contains top-level data array and meta object
+      - meta includes total (integer) and timestamp (ISO-8601)
+      - Endpoint is publicly accessible with no authentication
+
+  - id: REQ-002
+    title: Product object schema
+    type: functional
+    description: Each product must contain id (integer), name (string), price (decimal)
+    acceptanceCriteria:
+      - Each product contains id (integer unique), name (string non-empty), price (decimal positive)
+      - id values are unique across all products
+
+  - id: REQ-003
+    title: Pre-populated sample data - 5 products
+    type: functional
+    description: Database pre-populated with 5 products via Flyway migration
+    acceptanceCriteria:
+      - Database contains exactly 5 products on first startup
+      - Products are Wireless Headphones 79.99, USB-C Cable 12.99, Laptop Stand 34.99, Mechanical Keyboard 129.99, 4K Monitor 299.99
+      - Data seeded via Flyway migration not application code
+
+  - id: REQ-004
+    title: HTTP status codes and error handling
+    type: functional
+    description: HTTP 200 on success; HTTP 500 with structured error body on database failure
+    acceptanceCriteria:
+      - Successful GET returns HTTP 200
+      - Database failure returns HTTP 500 with error.code, error.message, error.timestamp
+
+  - id: REQ-005
+    title: Response time under 200ms at p95
+    type: non-functional
+    description: Endpoint must respond within 200ms at 95th percentile under normal load
+    constraints:
+      performance: < 200ms p95 response time
+    acceptanceCriteria:
+      - p95 response time below 200ms under 100 concurrent requests
+      - HikariCP connection pool configured
+
+  - id: REQ-006
+    title: Support 100 concurrent requests
+    type: non-functional
+    description: Service must handle at least 100 concurrent requests without errors
+    constraints:
+      performance: 100 concurrent requests minimum throughput
+    acceptanceCriteria:
+      - No errors under 100 concurrent requests
+      - Connection pooling enabled via HikariCP
+      - Stateless design with no session affinity
+
+  - id: REQ-007
+    title: 99.5% availability SLA with graceful degradation
+    type: non-functional
+    description: Service must maintain 99.5% uptime and return structured errors on DB failure
+    acceptanceCriteria:
+      - HTTP 500 with error body on database failure (not unhandled exception)
+      - Actuator /actuator/health endpoint returns service health
+
+  - id: REQ-008
+    title: PostgreSQL database with products table
+    type: integration
+    description: PostgreSQL as primary data store; products table via Flyway migration
+    integrations:
+      - type: database
+        name: PostgreSQL
+        direction: outbound
+        description: Primary data store. Table products with id BIGINT PK, name VARCHAR NOT NULL, price DECIMAL NOT NULL, created_at TIMESTAMP, updated_at TIMESTAMP
+    acceptanceCriteria:
+      - Flyway migration creates products table on startup
+      - price column has CHECK constraint price > 0
+      - H2 in-memory database used for test profile
+
+  - id: REQ-009
+    title: Layered architecture Controller Service Repository
+    type: functional
+    description: Strict layered architecture - REST Controller -> Service -> Repository -> Database
+    acceptanceCriteria:
+      - ProductController delegates all logic to ProductService
+      - ProductService uses ProductRepository for data access
+      - No direct database access from Controller
+      - Spring Data JPA used for repository layer
+
+  - id: REQ-010
+    title: API documentation via Springdoc OpenAPI
+    type: functional
+    description: Auto-generated API documentation via Springdoc OpenAPI Swagger UI
+    acceptanceCriteria:
+      - Springdoc OpenAPI dependency in pom.xml
+      - Swagger UI accessible at /swagger-ui/index.html
+      - OpenAPI spec at /v3/api-docs
+
+  - id: REQ-011
+    title: Unit and integration tests with 80% coverage
+    type: non-functional
+    description: Unit tests for all layers; integration tests for REST endpoint; JaCoCo 80% minimum
+    constraints:
+      performance: 80% minimum code coverage JaCoCo
+    acceptanceCriteria:
+      - Unit tests cover ProductService and ProductController
+      - Integration tests use RestAssured
+      - JaCoCo configured with 0.80 minimum coverage threshold
+      - All tests pass on mvn verify
+
+attachedDocuments:
+  - type: architecture
+    name: product-listing-architecture.md
+    status: stored
+    rawPath: output/projects/product-listing-api/docs/attachments/raw/product-listing-architecture.md
+    convertedPath: output/projects/product-listing-api/docs/attachments/architecture.md
+    notes: Fetched from GitHub commit 653608d. Controller/Service/Repository/DB components and data flow.
+  - type: other
+    name: product-listing-technical-document.md
+    status: stored
+    rawPath: output/projects/product-listing-api/docs/attachments/raw/product-listing-technical-document.md
+    convertedPath: output/projects/product-listing-api/docs/attachments/technical.md
+    notes: Fetched from GitHub commit 653608d. API endpoint, DB schema, sample data.
+  - type: nfr
+    name: product-listing-nfr.md
+    status: stored
+    rawPath: output/projects/product-listing-api/docs/attachments/raw/product-listing-nfr.md
+    convertedPath: output/projects/product-listing-api/docs/attachments/nfr.md
+    notes: Fetched from GitHub commit 653608d. Performance, reliability, scalability targets.
+  - type: other
+    name: product-listing-diagrams.md
+    status: stored
+    rawPath: output/projects/product-listing-api/docs/attachments/raw/product-listing-diagrams.md
+    convertedPath: output/projects/product-listing-api/docs/attachments/diagrams.md
+    notes: Fetched from GitHub commit 653608d. API flow diagram and DB schema diagram.
